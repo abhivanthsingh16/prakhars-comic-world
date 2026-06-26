@@ -2,72 +2,129 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
+import Container from "./ui/Container";
+import Button from "./ui/Button";
 
 export default function FeaturedComic() {
   return (
-    <section className="max-w-7xl mx-auto px-6 py-24">
+    <section className="py-28 bg-slate-950/40">
+      <Container>
 
-      <h2 className="text-center text-5xl font-black mb-16">
-        Featured Comic
-      </h2>
+        <div className="grid items-center gap-20 lg:grid-cols-2">
 
-      <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Left */}
 
-        <motion.div
-          whileHover={{
-            rotate: -3,
-            scale: 1.05,
-          }}
-          className="flex justify-center"
-        >
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+          >
 
-          <Image
-            src="/images/Cover.PNG"
-            alt="The Alien Friend Lin"
-            width={400}
-            height={560}
-            className="rounded-3xl shadow-2xl"
-          />
+            <span className="inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-bold uppercase tracking-widest text-cyan-300">
+              Inside This Book
+            </span>
 
-        </motion.div>
+            <h2 className="mt-6 text-6xl font-black leading-tight">
+              Two Amazing
+              <span className="block text-cyan-400">
+                Adventures
+              </span>
+            </h2>
 
-        <div>
+            <div className="mt-10 space-y-8">
 
-          <p className="text-yellow-400 font-bold">
-            Book 1
-          </p>
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
 
-          <h3 className="text-5xl font-black mt-4">
-            The Alien Friend Lin
-          </h3>
+                <p className="text-yellow-400 font-bold uppercase tracking-wider">
+                  Chapter 1
+                </p>
 
-          <p className="mt-8 text-xl text-gray-300 leading-9">
+                <h3 className="mt-2 text-3xl font-black">
+                  The Alien Friend Lin
+                </h3>
 
-            Follow Lin on an unforgettable adventure filled
-            with friendship, mystery, action and imagination.
+                <p className="mt-3 text-slate-300">
+                  Meet Lin for the very first time and begin an unforgettable adventure full of friendship, courage and imagination.
+                </p>
 
-          </p>
+              </div>
 
-          <div className="mt-10 flex gap-5">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
 
-            <button className="bg-yellow-400 text-black px-8 py-4 rounded-full font-bold hover:scale-105 transition">
+                <p className="text-cyan-400 font-bold uppercase tracking-wider">
+                  Chapter 2
+                </p>
 
-              Buy Paperback
+                <h3 className="mt-2 text-3xl font-black">
+                  Journey To Mars
+                </h3>
 
-            </button>
+                <p className="mt-3 text-slate-300">
+                  The adventure continues as Lin and Leo travel towards Mars and face exciting new discoveries.
+                </p>
 
-            <button className="border border-white px-8 py-4 rounded-full hover:bg-white hover:text-black transition">
+              </div>
 
-              Preview
+            </div>
 
-            </button>
+            <div className="mt-10 flex gap-5">
 
-          </div>
+              <Button>
+                Buy Paperback
+              </Button>
+
+              <Button variant="secondary">
+                Read Preview
+              </Button>
+
+            </div>
+
+          </motion.div>
+
+          {/* Right */}
+
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            className="relative flex justify-center"
+          >
+
+            <div className="absolute h-[520px] w-[520px] rounded-full bg-cyan-500/15 blur-[120px]" />
+
+            <motion.div
+              whileHover={{ rotate: -5, scale: 1.04 }}
+              className="absolute left-8 top-0 z-10"
+            >
+              <Image
+                src="/sample/Page1.PNG"
+                alt="Chapter 1"
+                width={280}
+                height={400}
+                className="rounded-2xl border border-white/10 shadow-2xl"
+              />
+            </motion.div>
+
+            <motion.div
+              whileHover={{ rotate: 5, scale: 1.04 }}
+              className="relative z-20 mt-20 ml-36"
+            >
+              <Image
+                src="/images/Chapter2.PNG"
+                alt="Chapter 2"
+                width={280}
+                height={400}
+                className="rounded-2xl border border-white/10 shadow-2xl"
+              />
+            </motion.div>
+
+          </motion.div>
 
         </div>
 
-      </div>
-
+      </Container>
     </section>
   );
 }

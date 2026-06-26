@@ -4,6 +4,10 @@ import Link from "next/link";
 import { BookOpen, User, Rocket } from "lucide-react";
 import { motion } from "framer-motion";
 
+import Container from "./ui/Container";
+import GlassCard from "./ui/GlassCard";
+import SectionHeading from "./ui/SectionHeading";
+
 const cards = [
   {
     title: "Read the Comic",
@@ -27,39 +31,63 @@ const cards = [
 
 export default function ExploreUniverse() {
   return (
-    <section className="max-w-7xl mx-auto px-6 py-24">
-      <h2 className="text-5xl font-black text-center mb-16">
-        Explore The Universe
-      </h2>
+    <section className="py-24">
+      <Container>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        {cards.map((card, index) => {
-          const Icon = card.icon;
+        <SectionHeading
+          subtitle="DISCOVER"
+          title="Explore the Universe"
+        />
 
-          return (
-            <motion.div
-              key={index}
-              whileHover={{ y: -10, scale: 1.03 }}
-              className="rounded-3xl border border-slate-700 bg-white/5 backdrop-blur-md p-8 shadow-xl"
-            >
-              <Icon className="w-14 h-14 text-yellow-400 mb-6" />
+        <div className="grid gap-8 md:grid-cols-3">
 
-              <h3 className="text-2xl font-bold">{card.title}</h3>
+          {cards.map((card, index) => {
 
-              <p className="text-gray-300 mt-4">
-                {card.description}
-              </p>
+            const Icon = card.icon;
 
-              <Link
-                href={card.href}
-                className="inline-block mt-8 text-yellow-400 font-bold"
+            return (
+
+              <motion.div
+                key={index}
+                whileHover={{
+                  y: -8,
+                  scale: 1.03,
+                }}
+                transition={{
+                  duration: 0.25,
+                }}
               >
-                Learn More →
-              </Link>
-            </motion.div>
-          );
-        })}
-      </div>
+
+                <GlassCard>
+
+                  <Icon className="mb-6 h-14 w-14 text-yellow-400" />
+
+                  <h3 className="text-2xl font-bold">
+                    {card.title}
+                  </h3>
+
+                  <p className="mt-4 leading-7 text-gray-300">
+                    {card.description}
+                  </p>
+
+                  <Link
+                    href={card.href}
+                    className="mt-8 inline-block font-bold text-yellow-400 hover:text-yellow-300"
+                  >
+                    Learn More →
+                  </Link>
+
+                </GlassCard>
+
+              </motion.div>
+
+            );
+
+          })}
+
+        </div>
+
+      </Container>
     </section>
   );
 }

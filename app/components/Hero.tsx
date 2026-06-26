@@ -1,69 +1,51 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
+
+import HeroContent from "./hero/HeroContent";
+import HeroImage from "./hero/HeroImage";
+import GalaxyBackground from "./hero/GalaxyBackground";
+import Container from "./ui/Container";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-black">
 
-      <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-12 items-center">
+      <GalaxyBackground />
 
-        <motion.div
-          initial={{ opacity: 0, x: -80 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 1 }}
-        >
+      {/* Extra Background Glow */}
+      <div className="absolute left-1/2 top-0 h-[900px] w-[900px] -translate-x-1/2 rounded-full bg-cyan-500/10 blur-[180px]" />
 
-          <p className="text-yellow-400 font-bold text-xl">
-            Created by 10-Year-Old Author
-          </p>
+      <Container>
 
-          <h1 className="mt-5 text-6xl lg:text-8xl font-black leading-tight">
-            THE ALIEN
-            <br />
-            FRIEND LIN
-          </h1>
+        <div className="relative z-10 grid min-h-screen items-center gap-20 pt-32 pb-24 lg:grid-cols-[1.05fr_0.95fr]">
 
-          <p className="mt-8 text-xl text-gray-300 leading-9 max-w-xl">
-            Join Lin on an unforgettable adventure filled with
-            friendship, imagination and excitement.
-          </p>
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <HeroContent />
+          </motion.div>
 
-          <div className="flex gap-5 mt-10">
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{
+              duration: 0.8,
+              delay: 0.15,
+            }}
+            className="flex justify-center lg:justify-end"
+          >
+            <HeroImage />
+          </motion.div>
 
-            <button className="rounded-full bg-yellow-400 px-8 py-4 text-black font-bold hover:scale-105 transition">
-              Buy Now
-            </button>
+        </div>
 
-            <button className="rounded-full border border-white px-8 py-4 hover:bg-white hover:text-black transition">
-              Read Sample
-            </button>
+      </Container>
 
-          </div>
-
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: 80 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 1 }}
-          whileHover={{ rotate: -2, scale: 1.05 }}
-          className="flex justify-center"
-        >
-
-          <Image
-            src="/images/Cover.PNG"
-            alt="The Alien Friend Lin"
-            width={420}
-            height={600}
-            className="rounded-3xl shadow-2xl"
-            priority
-          />
-
-        </motion.div>
-
-      </div>
+      {/* Bottom Fade */}
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black to-transparent" />
 
     </section>
   );

@@ -99,7 +99,7 @@ export default function FeaturedComic() {
               className="absolute left-8 top-0 z-10"
             >
               <Image
-                src="/sample/Page1.PNG"
+                src="/sample/Page1.webp"
                 alt="Chapter 1"
                 width={280}
                 height={400}
@@ -112,7 +112,7 @@ export default function FeaturedComic() {
               className="relative z-20 mt-20 ml-36"
             >
               <Image
-                src="/images/Chapter2.PNG"
+                src="/images/Chapter2.webp"
                 alt="Chapter 2"
                 width={280}
                 height={400}

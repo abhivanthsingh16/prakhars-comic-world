@@ -33,7 +33,7 @@ export default function AuthorSection() {
             >
 
               <Image
-                src="/images/Prakhar.jpeg"
+                src="/images/Prakhar.webp"
                 alt="Prakhar Singh Tomar"
                 width={380}
                 height={480}

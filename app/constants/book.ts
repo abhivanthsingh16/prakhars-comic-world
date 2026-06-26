@@ -1,7 +1,7 @@
 export const book = {
   title: "The Alien Friend Lin",
   subtitle: "An unforgettable space adventure filled with friendship, imagination and excitement.",
-  cover: "/images/Cover.PNG",
+  cover: "/images/Cover.webp",
   author: "Prakhar Singh Tomar",
   age: "Age 6+",
   pages: 74,

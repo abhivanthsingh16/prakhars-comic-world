@@ -14,7 +14,7 @@ export default function StorePage() {
           <div className="flex justify-center">
 
             <Image
-              src="/images/Cover.PNG"
+              src="/images/Cover.webp"
               alt="The Alien Friend Lin"
               width={450}
               height={630}

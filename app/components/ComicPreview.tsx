@@ -6,12 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import Container from "./ui/Container";
 
 const pages = [
-  "/sample/Page1.PNG",
-  "/sample/Page2.PNG",
-  "/sample/Page3.PNG",
-  "/sample/Page4.PNG",
-  "/sample/Page5.PNG",
-  "/sample/Page6.PNG",
+  "/sample/Page1.webp",
+  "/sample/Page2.webp",
+  "/sample/Page3.webp",
+  "/sample/Page4.webp",
+  "/sample/Page5.webp",
+  "/sample/Page6.webp",
 ];
 
 export default function ComicPreview() {

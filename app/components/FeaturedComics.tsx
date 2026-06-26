@@ -22,7 +22,7 @@ export default function FeaturedComic() {
         >
 
           <Image
-            src="/images/cover.png"
+            src="/images/Cover.PNG"
             alt="The Alien Friend Lin"
             width={400}
             height={560}

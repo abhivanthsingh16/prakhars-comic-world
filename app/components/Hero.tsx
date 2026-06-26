@@ -53,7 +53,7 @@ export default function Hero() {
         >
 
           <Image
-            src="/images/cover.png"
+            src="/images/Cover.PNG"
             alt="The Alien Friend Lin"
             width={420}
             height={600}

@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 
 declare global {
   interface Window {
@@ -12,11 +11,7 @@ declare global {
 type Customer = { name: string; email: string; phone: string; address: string };
 
 export default function CheckoutPage() {
-  const searchParams = useSearchParams();
-  const quantity = useMemo(() => {
-    const parsed = Number(searchParams.get("quantity") || "1");
-    return Number.isInteger(parsed) ? Math.min(10, Math.max(1, parsed)) : 1;
-  }, [searchParams]);
+  const [quantity, setQuantity] = useState(1);
   const [customer, setCustomer] = useState<Customer>({ name: "", email: "", phone: "", address: "" });
   const [loading, setLoading] = useState(false);
   const [scriptReady, setScriptReady] = useState(false);
@@ -24,6 +19,8 @@ export default function CheckoutPage() {
   const subtotal = 299 * quantity;
 
   useEffect(() => {
+    const requestedQuantity = Number(new URLSearchParams(window.location.search).get("quantity") || "1");
+    if (Number.isInteger(requestedQuantity)) setQuantity(Math.min(10, Math.max(1, requestedQuantity)));
     if (window.Razorpay) { setScriptReady(true); return; }
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";

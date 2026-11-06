@@ -60,16 +60,6 @@ export default function StorePage() {
           </div>
         </div>
       </section>
-      <section className="border-t border-white/10 bg-black/20 py-16">
-        <div className="mx-auto max-w-4xl px-6">
-          <h2 className="text-center text-3xl font-black sm:text-4xl">Inside the book</h2>
-          <div className="mt-9 grid gap-5 sm:grid-cols-2">
-            <article className="rounded-2xl border border-white/10 bg-white/5 p-6"><p className="text-sm font-bold uppercase tracking-widest text-yellow-400">Chapter 1</p><h3 className="mt-2 text-xl font-bold">The Alien Friend Lin</h3><p className="mt-3 leading-7 text-slate-300">Meet Lin and Leo as an unexpected friendship begins.</p></article>
-            <article className="rounded-2xl border border-white/10 bg-white/5 p-6"><p className="text-sm font-bold uppercase tracking-widest text-cyan-400">Chapter 2</p><h3 className="mt-2 text-xl font-bold">Journey to Mars</h3><p className="mt-3 leading-7 text-slate-300">The adventure continues with a journey into space.</p></article>
-          </div>
-          <p className="mt-8 text-center text-sm text-slate-400">Want to see a few pages first? <Link href="/comics" className="font-semibold text-yellow-400 underline underline-offset-4">Read the preview</Link>.</p>
-        </div>
-      </section>
     </main>
   );
 }

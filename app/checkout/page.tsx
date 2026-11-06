@@ -16,6 +16,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [scriptReady, setScriptReady] = useState(false);
   const [message, setMessage] = useState("");
+  const [method, setMethod] = useState<"Razorpay" | "COD">("Razorpay");
   const subtotal = 299 * quantity;
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function CheckoutPage() {
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
     script.onload = () => setScriptReady(true);
-    script.onerror = () => setMessage("Unable to load payment window. Please refresh and try again.");
+    script.onerror = () => setMessage("Online payment could not load. You can still choose Cash on Delivery.");
     document.body.appendChild(script);
     return () => { script.onload = null; script.onerror = null; };
   }, []);
@@ -36,22 +37,28 @@ export default function CheckoutPage() {
   const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
-    if (!scriptReady || !window.Razorpay) { setMessage("Payment window is still loading. Please try again."); return; }
     setLoading(true);
     try {
+      if (method === "COD") {
+        const response = await fetch("/api/cod-order", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...customer, quantity }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not place COD order.");
+        window.location.href = `/payment-success?method=COD&order=${encodeURIComponent(result.orderId)}`;
+        return;
+      }
+      if (!scriptReady || !window.Razorpay) throw new Error("Online payment is still loading. Please try again or select Cash on Delivery.");
       const response = await fetch("/api/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...customer, quantity }),
       });
       const order = await response.json();
       if (!response.ok) throw new Error(order.error || "Could not start payment.");
       const options = {
-        key: order.keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Lin and Leo",
-        description: `The Alien Friend Lin x ${quantity}` ,
+        key: order.keyId, amount: order.amount, currency: order.currency,
+        name: "Lin and Leo", description: `The Alien Friend Lin x ${quantity}`,
         order_id: order.orderId,
         prefill: { name: customer.name, email: customer.email, contact: customer.phone },
         notes: { shipping_address: customer.address, quantity: String(quantity) },
@@ -59,13 +66,12 @@ export default function CheckoutPage() {
         handler: async (payment: Record<string, string>) => {
           try {
             const verification = await fetch("/api/verify-payment", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+              method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payment),
             });
             const result = await verification.json();
             if (!verification.ok || !result.verified) throw new Error(result.error || "Payment could not be verified.");
-            window.location.href = "/payment-success";
+            window.location.href = `/payment-success?method=Razorpay&order=${encodeURIComponent(order.orderId)}`;
           } catch (error) {
             setMessage(error instanceof Error ? error.message : "Payment verification failed. Please contact us before paying again.");
             setLoading(false);
@@ -92,16 +98,27 @@ export default function CheckoutPage() {
             <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Phone Number" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
             <textarea required rows={4} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Full Shipping Address with PIN Code" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
           </div>
-          <div className="mt-8 rounded-2xl bg-slate-900 p-5">
+          <div className="mt-6">
+            <p className="mb-3 font-semibold">Choose payment method</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={() => setMethod("Razorpay")} className={`rounded-xl border p-4 text-left ${method === "Razorpay" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
+                <span className="block font-bold">Pay Online</span><span className="mt-1 block text-sm text-slate-300">UPI, cards and net banking</span>
+              </button>
+              <button type="button" onClick={() => setMethod("COD")} className={`rounded-xl border p-4 text-left ${method === "COD" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
+                <span className="block font-bold">Cash on Delivery</span><span className="mt-1 block text-sm text-slate-300">Pay when your book arrives</span>
+              </button>
+            </div>
+          </div>
+          <div className="mt-7 rounded-2xl bg-slate-900 p-5">
             <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>
             <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Book subtotal</span><span>₹{subtotal}</span></div>
-            <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is not included in this test checkout. Delivery charges will be configured before real orders are accepted.</p>
+            <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is not included. The final delivery charge must be confirmed before accepting live orders. COD availability may depend on courier serviceability.</p>
           </div>
           {message && <p role="alert" className="mt-5 rounded-xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{message}</p>}
-          <button type="submit" disabled={loading || !scriptReady} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
-            {loading ? "Processing..." : !scriptReady ? "Loading payment..." : `Pay ₹${subtotal}`}
+          <button type="submit" disabled={loading} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
+            {loading ? "Processing..." : method === "COD" ? `Place COD Order · ₹${subtotal} + shipping` : !scriptReady ? "Loading payment..." : `Pay ₹${subtotal} + shipping`}
           </button>
-          <p className="mt-3 text-center text-xs text-slate-400">Secure payment powered by Razorpay · Test mode</p>
+          <p className="mt-3 text-center text-xs text-slate-400">Lin and Leo · Secure checkout</p>
         </form>
       </div>
     </main>

@@ -124,7 +124,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const canCheckout = Boolean(quote && quote.pincode === pincode && quote.paymentMethod === (method === "COD" ? "COD" : "Prepaid") && quote.serviceable && (method !== "COD" || quote.codAvailable));
+  const canCheckout = false; // Keep orders disabled until the quoted shipping charge is included in payment and order records.
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-black pt-32 text-white">
@@ -170,7 +170,7 @@ export default function CheckoutPage() {
           </div>
           {message && <p role="alert" className="mt-5 rounded-xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{message}</p>}
           <button type="submit" disabled={loading || !canCheckout} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
-            {loading ? "Processing..." : !canCheckout ? "Check shipping to continue" : method === "COD" ? `Place COD Order · ₹${subtotal} + shipping` : !scriptReady ? "Loading payment..." : `Pay ₹${subtotal} + shipping`}
+            {loading ? "Processing..." : "Orders temporarily paused while shipping is configured"}
           </button>
           <p className="mt-3 text-center text-xs text-slate-400">Lin and Leo · Secure checkout</p>
         </form>

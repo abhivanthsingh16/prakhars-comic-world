@@ -5,6 +5,9 @@ import { FormEvent, useEffect, useState } from "react";
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+    initSendOTP?: (configuration: Record<string, unknown>) => void;
+    sendOtp?: (identifier: string, success?: (data: any) => void, failure?: (error: any) => void) => void;
+    verifyOtp?: (otp: string, success?: (data: any) => void, failure?: (error: any) => void) => void;
   }
 }
 
@@ -31,6 +34,12 @@ export default function CheckoutPage() {
   const [scriptReady, setScriptReady] = useState(false);
   const [message, setMessage] = useState("");
   const [method, setMethod] = useState<"Razorpay" | "COD">("Razorpay");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneVerificationProof, setPhoneVerificationProof] = useState("");
+  const [verifiedPhone, setVerifiedPhone] = useState("");
   const subtotal = 299 * quantity;
   const fullAddress = [customer.address, customer.city, customer.state, pincode].filter(Boolean).join(", ");
 
@@ -105,11 +114,122 @@ export default function CheckoutPage() {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [pincode, quantity, method]);
 
-  const update = (field: keyof Customer, value: string) => setCustomer((current) => ({ ...current, [field]: value }));
+  const update = (field: keyof Customer, value: string) => {
+    setCustomer((current) => ({ ...current, [field]: value }));
+    if (field === "phone") {
+      setPhoneVerified(false);
+      setPhoneVerificationProof("");
+      setVerifiedPhone("");
+      setOtpSent(false);
+      setOtp("");
+    }
+  };
+
+  const loadMsg91Sdk = async () => {
+    if (window.initSendOTP) return;
+    await new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>('script[src="https://verify.msg91.com/otp-provider.js"]');
+      if (existing) {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => reject(new Error("MSG91 OTP service could not load.")), { once: true });
+        if (window.initSendOTP) resolve();
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://verify.msg91.com/otp-provider.js";
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("MSG91 OTP service could not load."));
+      document.body.appendChild(script);
+    });
+    if (!window.initSendOTP) throw new Error("MSG91 OTP service did not initialize.");
+  };
+
+  const startPhoneVerification = async () => {
+    setMessage("");
+    const digits = customer.phone.replace(/\\D/g, "");
+    const mobile = digits.length === 10 ? `91${digits}` : digits;
+    if (!/^91\\d{10}$/.test(mobile)) {
+      setMessage("Enter a valid 10-digit Indian mobile number.");
+      return;
+    }
+    const widgetId = process.env.NEXT_PUBLIC_MSG91_WIDGET_ID;
+    const tokenAuth = process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH;
+    if (!widgetId || !tokenAuth) {
+      setMessage("OTP service configuration is missing. Please contact the store.");
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      await loadMsg91Sdk();
+      window.initSendOTP?.({
+        widgetId,
+        tokenAuth,
+        identifier: mobile,
+        exposeMethods: true,
+        captchaRenderId: "msg91-captcha",
+        success: () => undefined,
+        failure: (error: unknown) => setMessage(typeof error === "string" ? error : "OTP verification failed. Please try again."),
+      });
+      if (!window.sendOtp) throw new Error("MSG91 send OTP method is unavailable.");
+      window.sendOtp(mobile, () => {
+        setOtpSent(true);
+        setOtpLoading(false);
+        setMessage("OTP sent. Enter the 4-digit code you received.");
+      }, (error) => {
+        setOtpLoading(false);
+        setMessage(typeof error === "string" ? error : "Could not send OTP. Please try again.");
+      });
+    } catch (error) {
+      setOtpLoading(false);
+      setMessage(error instanceof Error ? error.message : "Could not start phone verification.");
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    setMessage("");
+    if (!/^\\d{4}$/.test(otp)) {
+      setMessage("Enter the 4-digit OTP.");
+      return;
+    }
+    if (!window.verifyOtp) {
+      setMessage("OTP verification is not ready. Please request a new OTP.");
+      return;
+    }
+    setOtpLoading(true);
+    window.verifyOtp(otp, async (data) => {
+      try {
+        const accessToken = data?.["access-token"] || data?.accessToken || data?.token;
+        if (typeof accessToken !== "string") throw new Error("MSG91 did not return a verification token.");
+        const digits = customer.phone.replace(/\\D/g, "");
+        const mobile = digits.length === 10 ? `91${digits}` : digits;
+        const response = await fetch("/api/verify-phone-otp", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken, phone: mobile }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.verified || !result.phoneVerificationProof) throw new Error(result.error || "Mobile number verification failed.");
+        setPhoneVerificationProof(result.phoneVerificationProof);
+        setVerifiedPhone(customer.phone);
+        setPhoneVerified(true);
+        setOtpSent(false);
+        setOtp("");
+        setMessage("Mobile number verified successfully.");
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Could not verify this mobile number.");
+      } finally {
+        setOtpLoading(false);
+      }
+    }, (error) => {
+      setOtpLoading(false);
+      setMessage(typeof error === "string" ? error : "Incorrect or expired OTP. Please try again.");
+    });
+  };
 
   const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
+    if (!phoneVerified || verifiedPhone !== customer.phone || !phoneVerificationProof) { setMessage("Please verify your mobile number with OTP before placing the order."); return; }
     if (!customer.city || !customer.state) { setMessage("Please enter a valid PIN code so we can fill your city and state."); return; }
     if (!quote || quote.pincode !== pincode || quote.paymentMethod !== (method === "COD" ? "COD" : "Prepaid") || !quote.serviceable || (method === "COD" && !quote.codAvailable)) {
       setMessage("Please check shipping serviceability again for your PIN code and selected payment method.");
@@ -120,7 +240,7 @@ export default function CheckoutPage() {
       if (method === "COD") {
         const response = await fetch("/api/cod-order", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...customer, address: fullAddress, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0 }),
+          body: JSON.stringify({ ...customer, address: fullAddress, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0, phoneVerificationProof }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Could not place COD order.");
@@ -130,7 +250,7 @@ export default function CheckoutPage() {
       if (!scriptReady || !window.Razorpay) throw new Error("Online payment is still loading. Please try again or select Cash on Delivery.");
       const response = await fetch("/api/create-order", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...customer, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0 }),
+        body: JSON.stringify({ ...customer, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0, phoneVerificationProof }),
       });
       const order = await response.json();
       if (!response.ok) throw new Error(order.error || "Could not start payment.");
@@ -165,7 +285,7 @@ export default function CheckoutPage() {
   };
 
   const shippingCharge = quote?.serviceable && quote.cheapest ? quote.cheapest.rate : 0;
-  const canCheckout = Boolean(quote?.serviceable && quote.pincode === pincode && quote.paymentMethod === (method === "COD" ? "COD" : "Prepaid") && (method !== "COD" || quote.codAvailable));
+  const canCheckout = Boolean(phoneVerified && verifiedPhone === customer.phone && phoneVerificationProof && quote?.serviceable && quote.pincode === pincode && quote.paymentMethod === (method === "COD" ? "COD" : "Prepaid") && (method !== "COD" || quote.codAvailable));
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-black pt-32 text-white">
@@ -186,8 +306,26 @@ export default function CheckoutPage() {
                 <input required autoComplete="name" value={customer.name} onChange={(e) => update("name", e.target.value)} placeholder="Enter your full name" aria-label="Full name" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
               </label>
               <label className="block text-sm font-medium text-slate-300">Mobile number
-                <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Enter mobile number" aria-label="Mobile number" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} readOnly={phoneVerified} onChange={(e) => update("phone", e.target.value)} placeholder="Enter 10-digit mobile number" aria-label="Mobile number" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400 read-only:opacity-70" />
               </label>
+              <div className="mt-3">
+                {phoneVerified && verifiedPhone === customer.phone ? (
+                  <p className="text-sm font-semibold text-emerald-300">✓ Mobile number verified</p>
+                ) : (
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button type="button" disabled={otpLoading || !customer.phone.trim()} onClick={startPhoneVerification} className="rounded-xl border border-yellow-400/60 px-5 py-3 text-sm font-bold text-yellow-300 disabled:opacity-50">
+                      {otpLoading && !otpSent ? "Sending OTP..." : otpSent ? "Resend OTP" : "Verify mobile with OTP"}
+                    </button>
+                    {otpSent && (
+                      <div className="flex flex-1 gap-2">
+                        <input inputMode="numeric" maxLength={4} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\\D/g, "").slice(0, 4))} placeholder="4-digit OTP" aria-label="4-digit OTP" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/80 p-3 text-white outline-none focus:border-yellow-400" />
+                        <button type="button" disabled={otpLoading || otp.length !== 4} onClick={verifyPhoneOtp} className="rounded-xl bg-yellow-400 px-5 py-3 text-sm font-bold text-black disabled:opacity-50">{otpLoading ? "Verifying..." : "Confirm OTP"}</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div id="msg91-captcha" className="mt-2" />
+              </div>
               <label className="block text-sm font-medium text-slate-300">Email address
                 <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Enter email address" aria-label="Email address" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
               </label>

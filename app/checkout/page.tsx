@@ -72,28 +72,6 @@ export default function CheckoutPage() {
 
   const update = (field: keyof Customer, value: string) => setCustomer((current) => ({ ...current, [field]: value }));
 
-  const checkShipping = async () => {
-    setMessage("");
-    setQuoteLoading(true);
-    setQuote(null);
-    try {
-      const response = await fetch("/api/shipping-rate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pincode, quantity, paymentMethod: method === "COD" ? "COD" : "Prepaid" }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not check delivery serviceability.");
-      setQuote(result as ShippingQuote);
-      if (!result.serviceable) setMessage("Shiprocket currently shows no courier service for this PIN code and parcel.");
-      else if (method === "COD" && !result.codAvailable) setMessage("Courier service is available, but COD is not currently available for this PIN code.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Shipping check failed. Please try again.");
-    } finally {
-      setQuoteLoading(false);
-    }
-  };
-
   const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
@@ -189,7 +167,6 @@ export default function CheckoutPage() {
           )}
           <div className="mt-7 rounded-2xl bg-slate-900 p-5">
             <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>
-            {quote?.serviceable && quote.cheapest && <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Indicative shipping (lowest courier)</span><span>₹{quote.cheapest.rate.toFixed(2)}</span></div>}
             <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Shipping charge</span><span>{canCheckout ? `₹${shippingCharge.toFixed(2)}` : "—"}</span></div>
             <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Total to pay</span><span>₹{(subtotal + (canCheckout ? shippingCharge : 0)).toFixed(2)}</span></div>
             <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is calculated using the live Shiprocket rate. We absorb any small difference at booking.</p>

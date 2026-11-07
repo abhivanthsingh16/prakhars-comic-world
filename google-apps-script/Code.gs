@@ -7,10 +7,10 @@ function setupSheet() {
   sheet.appendRow([
     "Order ID", "Created At", "Customer Name", "Email", "Phone", "Shipping Address",
     "Quantity", "Book Subtotal (INR)", "Payment Method", "Payment Status", "Order Status",
-    "Razorpay Order ID", "Razorpay Payment ID"
+    "Razorpay Order ID", "Razorpay Payment ID", "Shipping Charge (INR)", "Total (INR)", "Delivery PIN"
   ]);
   sheet.setFrozenRows(1);
-  sheet.getRange(1, 1, 1, 13).setFontWeight("bold");
+  sheet.getRange(1, 1, 1, 16).setFontWeight("bold");
   PropertiesService.getScriptProperties().setProperty("SPREADSHEET_ID", ss.getId());
   Logger.log("Your order sheet: " + ss.getUrl());
 }
@@ -27,10 +27,11 @@ function doPost(e) {
     if (!id) return json({ ok: false, error: "Run setupSheet first" });
     const sheet = SpreadsheetApp.openById(id).getSheetByName("Orders");
     if (data.action === "create") {
+      if (sheet.getLastColumn() < 16) sheet.getRange(1, 14, 1, 3).setValues([["Shipping Charge (INR)", "Total (INR)", "Delivery PIN"]]);
       sheet.appendRow([
         data.orderId, new Date(), data.name, data.email, data.phone, data.address,
         data.quantity, data.subtotal, data.paymentMethod, data.paymentStatus,
-        "New", data.razorpayOrderId || "", ""
+        "New", data.razorpayOrderId || "", "", data.shippingCharge || 0, data.total || data.subtotal || 0, data.pincode || ""
       ]);
       return json({ ok: true });
     }

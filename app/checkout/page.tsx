@@ -177,9 +177,7 @@ export default function CheckoutPage() {
               </button>
             </div>
           </div>
-          <button type="button" onClick={checkShipping} disabled={quoteLoading || !/^\d{6}$/.test(pincode)} className="mt-5 w-full rounded-xl border border-yellow-400/50 bg-yellow-400/10 p-3 font-semibold text-yellow-200 disabled:opacity-50">
-            {quoteLoading ? "Checking couriers..." : "Check shipping & COD availability"}
-          </button>
+          <p className="mt-4 text-sm text-slate-300">{quoteLoading ? "Calculating live shipping charge..." : /^\d{6}$/.test(pincode) ? "Shipping is calculated automatically for your PIN code." : "Enter your 6-digit PIN code to calculate shipping automatically."}</p>
           {quote?.serviceable && quote.cheapest && (
             <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4">
               <p className="font-semibold text-emerald-200">Courier service available</p>

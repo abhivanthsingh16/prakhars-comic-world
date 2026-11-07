@@ -137,7 +137,7 @@ export default function CheckoutPage() {
             <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Email Address" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
             <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Phone Number" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
             <textarea required rows={4} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Full Shipping Address (house, street, area, city, state)" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
-            <input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="Delivery PIN Code (6 digits)" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
+            <input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="Delivery PIN Code (6 digits)" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
           </div>
           <div className="mt-6">
             <p className="mb-3 font-semibold">Choose payment method</p>
@@ -150,7 +150,7 @@ export default function CheckoutPage() {
               </button>
             </div>
           </div>
-          <button type="button" onClick={checkShipping} disabled={quoteLoading || !/^\\d{6}$/.test(pincode)} className="mt-5 w-full rounded-xl border border-yellow-400/50 bg-yellow-400/10 p-3 font-semibold text-yellow-200 disabled:opacity-50">
+          <button type="button" onClick={checkShipping} disabled={quoteLoading || !/^\d{6}$/.test(pincode)} className="mt-5 w-full rounded-xl border border-yellow-400/50 bg-yellow-400/10 p-3 font-semibold text-yellow-200 disabled:opacity-50">
             {quoteLoading ? "Checking couriers..." : "Check shipping & COD availability"}
           </button>
           {quote?.serviceable && quote.cheapest && (

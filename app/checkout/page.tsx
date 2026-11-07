@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-type Customer = { name: string; email: string; phone: string; address: string };
+type Customer = { name: string; email: string; phone: string; address: string; city: string; state: string };
 type ShippingQuote = {
   pincode: string;
   paymentMethod: "COD" | "Prepaid";
@@ -21,7 +21,7 @@ type ShippingQuote = {
 
 export default function CheckoutPage() {
   const [quantity, setQuantity] = useState(1);
-  const [customer, setCustomer] = useState<Customer>({ name: "", email: "", phone: "", address: "" });
+  const [customer, setCustomer] = useState<Customer>({ name: "", email: "", phone: "", address: "", city: "", state: "" });
   const [pincode, setPincode] = useState("");
   const [quote, setQuote] = useState<ShippingQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function CheckoutPage() {
   const [scriptReady, setScriptReady] = useState(false);
   const [message, setMessage] = useState("");
   const [method, setMethod] = useState<"Razorpay" | "COD">("Razorpay");
-  const subtotal = 299 * quantity;
+  const subtotal = 299 * quantity;\n  const fullAddress = [customer.address, customer.city, customer.state, pincode].filter(Boolean).join(", ");
 
   useEffect(() => {
     const requestedQuantity = Number(new URLSearchParams(window.location.search).get("quantity") || "1");
@@ -84,7 +84,7 @@ export default function CheckoutPage() {
       if (method === "COD") {
         const response = await fetch("/api/cod-order", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...customer, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0 }),
+          body: JSON.stringify({ ...customer, address: fullAddress, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0 }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Could not place COD order.");
@@ -103,7 +103,7 @@ export default function CheckoutPage() {
         name: "Lin and Leo", description: `The Alien Friend Lin x ${quantity}`,
         order_id: order.orderId,
         prefill: { name: customer.name, email: customer.email, contact: customer.phone },
-        notes: { shipping_address: customer.address, quantity: String(quantity) },
+        notes: { shipping_address: fullAddress, quantity: String(quantity) },
         theme: { color: "#facc15" },
         handler: async (payment: Record<string, string>) => {
           try {
@@ -137,13 +137,24 @@ export default function CheckoutPage() {
         <h1 className="text-4xl font-black sm:text-5xl">Checkout</h1>
         <p className="mt-3 text-slate-300">Enter your delivery details to continue.</p>
         <form onSubmit={handleCheckout} className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-8">
-          <div className="grid gap-4">
-            <input required autoComplete="name" value={customer.name} onChange={(e) => update("name", e.target.value)} placeholder="Full Name" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
-            <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Email Address" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
-            <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Phone Number" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
-            <textarea required rows={4} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Full Shipping Address (house, street, area, city, state)" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
-            <input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="Delivery PIN Code (6 digits)" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
-          </div>
+          <section>
+            <h2 className="mb-4 text-lg font-bold">Contact details</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input required autoComplete="name" value={customer.name} onChange={(e) => update("name", e.target.value)} placeholder="Full name" aria-label="Full name" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
+              <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Mobile number" aria-label="Mobile number" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
+              <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Email address" aria-label="Email address" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400 sm:col-span-2" />
+            </div>
+          </section>
+          <section className="mt-7 border-t border-white/10 pt-6">
+            <h2 className="mb-1 text-lg font-bold">Delivery address</h2>
+            <p className="mb-4 text-sm text-slate-300">Please provide the complete address where we should deliver your comic.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <textarea required rows={2} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="House / flat, street, area, landmark" aria-label="House, street and area" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400 sm:col-span-2" />
+              <input required autoComplete="address-level2" value={customer.city} onChange={(e) => update("city", e.target.value)} placeholder="City" aria-label="City" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
+              <input required autoComplete="address-level1" value={customer.state} onChange={(e) => update("state", e.target.value)} placeholder="State" aria-label="State" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
+              <input required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="6-digit PIN code" aria-label="6-digit PIN code" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400 sm:col-span-2" />
+            </div>
+          </section>
           <div className="mt-6">
             <p className="mb-3 font-semibold">Choose payment method</p>
             <div className="grid gap-3 sm:grid-cols-2">

@@ -45,7 +45,7 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    if (!/^\\d{6}$/.test(pincode)) { setQuote(null); return; }
+    if (!/^\d{6}$/.test(pincode)) { setQuote(null); return; }
     let cancelled = false;
     const timer = setTimeout(async () => {
       setQuoteLoading(true);

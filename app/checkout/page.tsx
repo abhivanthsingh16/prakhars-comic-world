@@ -29,7 +29,8 @@ export default function CheckoutPage() {
   const [scriptReady, setScriptReady] = useState(false);
   const [message, setMessage] = useState("");
   const [method, setMethod] = useState<"Razorpay" | "COD">("Razorpay");
-  const subtotal = 299 * quantity;\n  const fullAddress = [customer.address, customer.city, customer.state, pincode].filter(Boolean).join(", ");
+  const subtotal = 299 * quantity;
+  const fullAddress = [customer.address, customer.city, customer.state, pincode].filter(Boolean).join(", ");
 
   useEffect(() => {
     const requestedQuantity = Number(new URLSearchParams(window.location.search).get("quantity") || "1");

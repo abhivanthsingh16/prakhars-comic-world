@@ -42,6 +42,7 @@ export default function CheckoutPage() {
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [phoneVerificationProof, setPhoneVerificationProof] = useState("");
   const [verifiedPhone, setVerifiedPhone] = useState("");
+  const [autoOtpAttemptedPhone, setAutoOtpAttemptedPhone] = useState("");
   const subtotal = 299 * quantity;
   const fullAddress = [customer.address, customer.city, customer.state, pincode].filter(Boolean).join(", ");
 
@@ -124,6 +125,7 @@ export default function CheckoutPage() {
       setVerifiedPhone("");
       setOtpSent(false);
       setOtp("");
+      setAutoOtpAttemptedPhone("");
     }
   };
 
@@ -175,14 +177,10 @@ export default function CheckoutPage() {
           failure: (error: unknown) => setMessage(typeof error === "string" ? error : "OTP verification failed. Please try again."),
         });
         setMsg91Initialized(true);
-        setOtpLoading(false);
-        setMessage("Please complete the CAPTCHA below, then click “Verify mobile with OTP” once more.");
-        return;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 400));
       }
       if (typeof window.isCaptchaVerified === "function" && !window.isCaptchaVerified()) {
-        setOtpLoading(false);
-        setMessage("Please complete the CAPTCHA first, then click “Verify mobile with OTP” again.");
-        return;
+        throw new Error("MSG91 requires its CAPTCHA security check. Disable CAPTCHA in the MSG91 widget settings to use automatic OTP sending.");
       }
       if (!window.sendOtp) throw new Error("MSG91 send OTP method is unavailable.");
       window.sendOtp(mobile, () => {
@@ -198,6 +196,17 @@ export default function CheckoutPage() {
       setMessage(error instanceof Error ? error.message : "Could not start phone verification.");
     }
   };
+
+  useEffect(() => {
+    const digits = customer.phone.replace(/\D/g, "");
+    if (digits.length !== 10 || phoneVerified || otpSent || otpLoading || autoOtpAttemptedPhone === customer.phone) return;
+    const phoneAtStart = customer.phone;
+    const timer = window.setTimeout(() => {
+      setAutoOtpAttemptedPhone(phoneAtStart);
+      void startPhoneVerification();
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [customer.phone, phoneVerified, otpSent, otpLoading, autoOtpAttemptedPhone]);
 
   const verifyPhoneOtp = async () => {
     setMessage("");
@@ -325,85 +334,94 @@ export default function CheckoutPage() {
                 {phoneVerified && verifiedPhone === customer.phone ? (
                   <p className="text-sm font-semibold text-emerald-300">✓ Mobile number verified</p>
                 ) : (
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <button type="button" disabled={otpLoading || !customer.phone.trim()} onClick={startPhoneVerification} className="rounded-xl border border-yellow-400/60 px-5 py-3 text-sm font-bold text-yellow-300 disabled:opacity-50">
-                      {otpLoading && !otpSent ? "Sending OTP..." : otpSent ? "Resend OTP" : "Verify mobile with OTP"}
-                    </button>
+                  <div className="space-y-3">
+                    {otpLoading && !otpSent && <p className="text-sm text-slate-300">Sending verification code automatically...</p>}
                     {otpSent && (
-                      <div className="flex flex-1 gap-2">
-                        <input inputMode="numeric" maxLength={4} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="4-digit OTP" aria-label="4-digit OTP" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/80 p-3 text-white outline-none focus:border-yellow-400" />
-                        <button type="button" disabled={otpLoading || otp.length !== 4} onClick={verifyPhoneOtp} className="rounded-xl bg-yellow-400 px-5 py-3 text-sm font-bold text-black disabled:opacity-50">{otpLoading ? "Verifying..." : "Confirm OTP"}</button>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input inputMode="numeric" maxLength={4} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Enter 4-digit OTP" aria-label="4-digit OTP" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/80 p-3 text-white outline-none focus:border-yellow-400" />
+                        <button type="button" disabled={otpLoading || otp.length !== 4} onClick={verifyPhoneOtp} className="rounded-xl bg-yellow-400 px-5 py-3 text-sm font-bold text-black disabled:opacity-50">{otpLoading ? "Verifying..." : "Verify OTP"}</button>
                       </div>
+                    )}
+                    {autoOtpAttemptedPhone === customer.phone && !otpSent && !otpLoading && !phoneVerified && (
+                      <button type="button" onClick={() => setAutoOtpAttemptedPhone("")} className="text-sm font-semibold text-yellow-300 underline">Try sending OTP again</button>
                     )}
                   </div>
                 )}
-                <div id="msg91-captcha" className="mt-2" />
+
               </div>
-              <label className="block text-sm font-medium text-slate-300">Email address
-                <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Enter email address" aria-label="Email address" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
-              </label>
+              {phoneVerified && verifiedPhone === customer.phone && (
+                              <label className="block text-sm font-medium text-slate-300">Email address
+                                <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Enter email address" aria-label="Email address" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                              </label>
+              )}
             </div>
           </section>
-          <section className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70">
-            <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl" aria-hidden="true">📍</span>
-              <div>
-                <h2 className="font-bold">Delivery address</h2>
-                <p className="text-xs text-slate-400">Where should we deliver your comic?</p>
+          {phoneVerified && verifiedPhone === customer.phone && (
+            <section className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70">
+              <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl" aria-hidden="true">📍</span>
+                <div>
+                  <h2 className="font-bold">Delivery address</h2>
+                  <p className="text-xs text-slate-400">Where should we deliver your comic?</p>
+                </div>
+              </div>
+              <div className="space-y-4 p-5">
+                <label className="block text-sm font-medium text-slate-300">House / flat, street, area and landmark
+                  <textarea required rows={2} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Enter house number, street, area and landmark" aria-label="House, street and area" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                </label>
+                <label className="block text-sm font-medium text-slate-300">PIN code
+                  <input required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { const value = e.target.value.replace(/\D/g, "").slice(0, 6); setPincode(value); setQuote(null); setCustomer((current) => ({ ...current, city: "", state: "" })); }} placeholder="Enter 6-digit PIN code" aria-label="6-digit PIN code" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                  {pincodeLoading && <span className="mt-2 block text-xs text-slate-300">Finding city and state...</span>}
+                  {!pincodeLoading && pincodeStatus && <span role="status" className={`mt-2 block text-xs ${pincodeStatus.includes("filled") ? "text-emerald-300" : "text-rose-300"}`}>{pincodeStatus}</span>}
+                </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm font-medium text-slate-300">City
+                    <input required readOnly autoComplete="address-level2" value={customer.city} placeholder="Auto-filled from PIN code" aria-label="City" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/50 p-4 text-white/80 outline-none" />
+                  </label>
+                  <label className="block text-sm font-medium text-slate-300">State
+                    <input required readOnly autoComplete="address-level1" value={customer.state} placeholder="Auto-filled from PIN code" aria-label="State" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/50 p-4 text-white/80 outline-none" />
+                  </label>
+                </div>
+              </div>
+            </section>
+  
+          )}
+          {phoneVerified && verifiedPhone === customer.phone && (
+            <div className="mt-6">
+              <p className="mb-3 font-semibold">Choose payment method</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => { setMethod("Razorpay"); setQuote(null); }} className={`rounded-xl border p-4 text-left ${method === "Razorpay" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
+                  <span className="block font-bold">Pay Online</span><span className="mt-1 block text-sm text-slate-300">UPI, cards and net banking</span>
+                </button>
+                <button type="button" onClick={() => { setMethod("COD"); setQuote(null); }} className={`rounded-xl border p-4 text-left ${method === "COD" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
+                  <span className="block font-bold">Cash on Delivery</span><span className="mt-1 block text-sm text-slate-300">Pay when your book arrives</span>
+                </button>
               </div>
             </div>
-            <div className="space-y-4 p-5">
-              <label className="block text-sm font-medium text-slate-300">House / flat, street, area and landmark
-                <textarea required rows={2} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Enter house number, street, area and landmark" aria-label="House, street and area" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
-              </label>
-              <label className="block text-sm font-medium text-slate-300">PIN code
-                <input required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { const value = e.target.value.replace(/\D/g, "").slice(0, 6); setPincode(value); setQuote(null); setCustomer((current) => ({ ...current, city: "", state: "" })); }} placeholder="Enter 6-digit PIN code" aria-label="6-digit PIN code" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
-                {pincodeLoading && <span className="mt-2 block text-xs text-slate-300">Finding city and state...</span>}
-                {!pincodeLoading && pincodeStatus && <span role="status" className={`mt-2 block text-xs ${pincodeStatus.includes("filled") ? "text-emerald-300" : "text-rose-300"}`}>{pincodeStatus}</span>}
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-300">City
-                  <input required readOnly autoComplete="address-level2" value={customer.city} placeholder="Auto-filled from PIN code" aria-label="City" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/50 p-4 text-white/80 outline-none" />
-                </label>
-                <label className="block text-sm font-medium text-slate-300">State
-                  <input required readOnly autoComplete="address-level1" value={customer.state} placeholder="Auto-filled from PIN code" aria-label="State" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/50 p-4 text-white/80 outline-none" />
-                </label>
-              </div>
+            <div className="mt-4 min-h-6 text-sm" aria-live="polite">
+              {quoteLoading ? (
+                <p className="text-slate-300">Calculating shipping...</p>
+              ) : quote?.serviceable && quote.cheapest?.etd ? (
+                <p className="text-emerald-200">Estimated delivery: {quote.cheapest.etd}</p>
+              ) : message ? (
+                <p role="alert" className="flex items-center gap-2 text-rose-300"><span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-300 font-bold">!</span>{message}</p>
+              ) : !/^\d{6}$/.test(pincode) ? (
+                <p className="text-slate-300">Enter your 6-digit PIN code to calculate shipping.</p>
+              ) : null}
             </div>
-          </section>
-          <div className="mt-6">
-            <p className="mb-3 font-semibold">Choose payment method</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button type="button" onClick={() => { setMethod("Razorpay"); setQuote(null); }} className={`rounded-xl border p-4 text-left ${method === "Razorpay" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
-                <span className="block font-bold">Pay Online</span><span className="mt-1 block text-sm text-slate-300">UPI, cards and net banking</span>
-              </button>
-              <button type="button" onClick={() => { setMethod("COD"); setQuote(null); }} className={`rounded-xl border p-4 text-left ${method === "COD" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
-                <span className="block font-bold">Cash on Delivery</span><span className="mt-1 block text-sm text-slate-300">Pay when your book arrives</span>
-              </button>
+  
+            <div className="mt-7 rounded-2xl bg-slate-900 p-5">
+              <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>
+              <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Shipping charge</span><span>{canCheckout ? `₹${shippingCharge.toFixed(2)}` : "—"}</span></div>
+              <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Total to pay</span><span>₹{(subtotal + (canCheckout ? shippingCharge : 0)).toFixed(2)}</span></div>
+  
             </div>
-          </div>
-          <div className="mt-4 min-h-6 text-sm" aria-live="polite">
-            {quoteLoading ? (
-              <p className="text-slate-300">Calculating shipping...</p>
-            ) : quote?.serviceable && quote.cheapest?.etd ? (
-              <p className="text-emerald-200">Estimated delivery: {quote.cheapest.etd}</p>
-            ) : message ? (
-              <p role="alert" className="flex items-center gap-2 text-rose-300"><span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-300 font-bold">!</span>{message}</p>
-            ) : !/^\d{6}$/.test(pincode) ? (
-              <p className="text-slate-300">Enter your 6-digit PIN code to calculate shipping.</p>
-            ) : null}
-          </div>
-
-          <div className="mt-7 rounded-2xl bg-slate-900 p-5">
-            <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>
-            <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Shipping charge</span><span>{canCheckout ? `₹${shippingCharge.toFixed(2)}` : "—"}</span></div>
-            <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Total to pay</span><span>₹{(subtotal + (canCheckout ? shippingCharge : 0)).toFixed(2)}</span></div>
-
-          </div>
-
-          <button type="submit" disabled={loading || !canCheckout} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
-            {loading ? "Processing..." : canCheckout ? `Pay ₹${(subtotal + shippingCharge).toFixed(2)}${method === "COD" ? " on Delivery" : " Online"}` : "Enter PIN code to calculate shipping"}
-          </button>
+  
+            <button type="submit" disabled={loading || !canCheckout} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
+              {loading ? "Processing..." : canCheckout ? `Pay ₹${(subtotal + shippingCharge).toFixed(2)}${method === "COD" ? " on Delivery" : " Online"}` : "Enter PIN code to calculate shipping"}
+            </button>
+  
+          )}
           <p className="mt-3 text-center text-xs text-slate-400">Lin and Leo · Secure checkout</p>
         </form>
       </div>

@@ -44,6 +44,32 @@ export default function CheckoutPage() {
     return () => { script.onload = null; script.onerror = null; };
   }, []);
 
+  useEffect(() => {
+    if (!/^\\d{6}$/.test(pincode)) { setQuote(null); return; }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setQuoteLoading(true);
+      setQuote(null);
+      setMessage("");
+      try {
+        const response = await fetch("/api/shipping-rate", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pincode, quantity, paymentMethod: method === "COD" ? "COD" : "Prepaid" }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not calculate shipping.");
+        if (!cancelled) {
+          setQuote(result as ShippingQuote);
+          if (!result.serviceable) setMessage("No courier service is available for this PIN code and parcel.");
+          else if (method === "COD" && !result.codAvailable) setMessage("Courier service is available, but COD is not available for this PIN code.");
+        }
+      } catch (error) {
+        if (!cancelled) setMessage(error instanceof Error ? error.message : "Shipping calculation failed.");
+      } finally { if (!cancelled) setQuoteLoading(false); }
+    }, 500);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [pincode, quantity, method]);
+
   const update = (field: keyof Customer, value: string) => setCustomer((current) => ({ ...current, [field]: value }));
 
   const checkShipping = async () => {
@@ -80,7 +106,7 @@ export default function CheckoutPage() {
       if (method === "COD") {
         const response = await fetch("/api/cod-order", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...customer, quantity }),
+          body: JSON.stringify({ ...customer, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0 }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Could not place COD order.");
@@ -90,7 +116,7 @@ export default function CheckoutPage() {
       if (!scriptReady || !window.Razorpay) throw new Error("Online payment is still loading. Please try again or select Cash on Delivery.");
       const response = await fetch("/api/create-order", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...customer, quantity }),
+        body: JSON.stringify({ ...customer, quantity, pincode, shippingCharge: quote.cheapest?.rate || 0 }),
       });
       const order = await response.json();
       if (!response.ok) throw new Error(order.error || "Could not start payment.");
@@ -124,7 +150,8 @@ export default function CheckoutPage() {
     }
   };
 
-  const canCheckout = false; // Keep orders disabled until the quoted shipping charge is included in payment and order records.
+  const shippingCharge = quote?.serviceable && quote.cheapest ? quote.cheapest.rate : 0;
+  const canCheckout = Boolean(quote?.serviceable && quote.pincode === pincode && quote.paymentMethod === (method === "COD" ? "COD" : "Prepaid") && (method !== "COD" || quote.codAvailable));
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-black pt-32 text-white">
@@ -165,12 +192,13 @@ export default function CheckoutPage() {
           <div className="mt-7 rounded-2xl bg-slate-900 p-5">
             <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>
             {quote?.serviceable && quote.cheapest && <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Indicative shipping (lowest courier)</span><span>₹{quote.cheapest.rate.toFixed(2)}</span></div>}
-            <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Book subtotal</span><span>₹{subtotal}</span></div>
-            <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is currently shown as an estimate only and is not yet added to the payment amount. Do not accept live orders until the final shipping charge is integrated.</p>
+            <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Shipping charge</span><span>{canCheckout ? `₹${shippingCharge.toFixed(2)}` : "—"}</span></div>
+            <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Total to pay</span><span>₹{(subtotal + (canCheckout ? shippingCharge : 0)).toFixed(2)}</span></div>
+            <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is calculated using the live Shiprocket rate. We absorb any small difference at booking.</p>
           </div>
           {message && <p role="alert" className="mt-5 rounded-xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{message}</p>}
           <button type="submit" disabled={loading || !canCheckout} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
-            {loading ? "Processing..." : "Orders temporarily paused while shipping is configured"}
+            {loading ? "Processing..." : canCheckout ? `Pay ₹${(subtotal + shippingCharge).toFixed(2)}${method === "COD" ? " on Delivery" : " Online"}` : "Enter PIN code to calculate shipping"}
           </button>
           <p className="mt-3 text-center text-xs text-slate-400">Lin and Leo · Secure checkout</p>
         </form>

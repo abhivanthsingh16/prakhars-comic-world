@@ -8,6 +8,7 @@ declare global {
     initSendOTP?: (configuration: Record<string, unknown>) => void;
     sendOtp?: (identifier: string, success?: (data: any) => void, failure?: (error: any) => void) => void;
     verifyOtp?: (otp: string, success?: (data: any) => void, failure?: (error: any) => void) => void;
+    isCaptchaVerified?: () => boolean;
   }
 }
 
@@ -37,6 +38,7 @@ export default function CheckoutPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
+  const [msg91Initialized, setMsg91Initialized] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [phoneVerificationProof, setPhoneVerificationProof] = useState("");
   const [verifiedPhone, setVerifiedPhone] = useState("");
@@ -162,15 +164,26 @@ export default function CheckoutPage() {
     setOtpLoading(true);
     try {
       await loadMsg91Sdk();
-      window.initSendOTP?.({
-        widgetId,
-        tokenAuth,
-        identifier: mobile,
-        exposeMethods: true,
-        captchaRenderId: "msg91-captcha",
-        success: () => undefined,
-        failure: (error: unknown) => setMessage(typeof error === "string" ? error : "OTP verification failed. Please try again."),
-      });
+      if (!msg91Initialized) {
+        window.initSendOTP?.({
+          widgetId,
+          tokenAuth,
+          identifier: mobile,
+          exposeMethods: true,
+          captchaRenderId: "msg91-captcha",
+          success: () => undefined,
+          failure: (error: unknown) => setMessage(typeof error === "string" ? error : "OTP verification failed. Please try again."),
+        });
+        setMsg91Initialized(true);
+        setOtpLoading(false);
+        setMessage("Please complete the CAPTCHA below, then click “Verify mobile with OTP” once more.");
+        return;
+      }
+      if (typeof window.isCaptchaVerified === "function" && !window.isCaptchaVerified()) {
+        setOtpLoading(false);
+        setMessage("Please complete the CAPTCHA first, then click “Verify mobile with OTP” again.");
+        return;
+      }
       if (!window.sendOtp) throw new Error("MSG91 send OTP method is unavailable.");
       window.sendOtp(mobile, () => {
         setOtpSent(true);

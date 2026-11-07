@@ -23,6 +23,8 @@ export default function CheckoutPage() {
   const [quantity, setQuantity] = useState(1);
   const [customer, setCustomer] = useState<Customer>({ name: "", email: "", phone: "", address: "", city: "", state: "" });
   const [pincode, setPincode] = useState("");
+  const [pincodeStatus, setPincodeStatus] = useState("");
+  const [pincodeLoading, setPincodeLoading] = useState(false);
   const [quote, setQuote] = useState<ShippingQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,6 +46,38 @@ export default function CheckoutPage() {
     document.body.appendChild(script);
     return () => { script.onload = null; script.onerror = null; };
   }, []);
+
+  useEffect(() => {
+    if (!/^\d{6}$/.test(pincode)) {
+      setPincodeStatus("");
+      setPincodeLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPincodeLoading(true);
+      setPincodeStatus("");
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+        if (!response.ok) throw new Error("PIN code lookup failed.");
+        const data = await response.json();
+        const office = data?.[0]?.Status === "Success" ? data?.[0]?.PostOffice?.[0] : null;
+        if (!office?.District || !office?.State) throw new Error("We couldn't find this PIN code. Please check it.");
+        if (!cancelled) {
+          setCustomer((current) => ({ ...current, city: office.District, state: office.State }));
+          setPincodeStatus("City and state filled automatically.");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCustomer((current) => ({ ...current, city: "", state: "" }));
+          setPincodeStatus(error instanceof Error ? error.message : "Unable to verify this PIN code.");
+        }
+      } finally {
+        if (!cancelled) setPincodeLoading(false);
+      }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [pincode]);
 
   useEffect(() => {
     if (!/^\d{6}$/.test(pincode)) { setQuote(null); return; }
@@ -76,6 +110,7 @@ export default function CheckoutPage() {
   const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
+    if (!customer.city || !customer.state) { setMessage("Please enter a valid PIN code so we can fill your city and state."); return; }
     if (!quote || quote.pincode !== pincode || quote.paymentMethod !== (method === "COD" ? "COD" : "Prepaid") || !quote.serviceable || (method === "COD" && !quote.codAvailable)) {
       setMessage("Please check shipping serviceability again for your PIN code and selected payment method.");
       return;
@@ -170,17 +205,19 @@ export default function CheckoutPage() {
               <label className="block text-sm font-medium text-slate-300">House / flat, street, area and landmark
                 <textarea required rows={2} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Enter house number, street, area and landmark" aria-label="House, street and area" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
               </label>
+              <label className="block text-sm font-medium text-slate-300">PIN code
+                <input required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { const value = e.target.value.replace(/\D/g, "").slice(0, 6); setPincode(value); setQuote(null); setCustomer((current) => ({ ...current, city: "", state: "" })); }} placeholder="Enter 6-digit PIN code" aria-label="6-digit PIN code" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                {pincodeLoading && <span className="mt-2 block text-xs text-slate-300">Finding city and state...</span>}
+                {!pincodeLoading && pincodeStatus && <span role="status" className={`mt-2 block text-xs ${pincodeStatus.includes("filled") ? "text-emerald-300" : "text-rose-300"}`}>{pincodeStatus}</span>}
+              </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-slate-300">City
-                  <input required autoComplete="address-level2" value={customer.city} onChange={(e) => update("city", e.target.value)} placeholder="City" aria-label="City" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                  <input required readOnly autoComplete="address-level2" value={customer.city} placeholder="Auto-filled from PIN code" aria-label="City" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/50 p-4 text-white/80 outline-none" />
                 </label>
                 <label className="block text-sm font-medium text-slate-300">State
-                  <input required autoComplete="address-level1" value={customer.state} onChange={(e) => update("state", e.target.value)} placeholder="State" aria-label="State" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                  <input required readOnly autoComplete="address-level1" value={customer.state} placeholder="Auto-filled from PIN code" aria-label="State" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/50 p-4 text-white/80 outline-none" />
                 </label>
               </div>
-              <label className="block text-sm font-medium text-slate-300">PIN code
-                <input required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="6-digit PIN code" aria-label="6-digit PIN code" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
-              </label>
             </div>
           </section>
           <div className="mt-6">

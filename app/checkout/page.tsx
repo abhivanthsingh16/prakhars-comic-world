@@ -155,19 +155,25 @@ export default function CheckoutPage() {
               </button>
             </div>
           </div>
-          <p className="mt-4 text-sm text-slate-300">{quoteLoading ? "Calculating live shipping charge..." : /^\d{6}$/.test(pincode) ? "Shipping is calculated automatically for your PIN code." : "Enter your 6-digit PIN code to calculate shipping automatically."}</p>
-          {quote?.serviceable && quote.cheapest?.etd && (
-            <p className="mt-3 text-sm text-emerald-200">
-              Estimated delivery: {quote.cheapest.etd}
-            </p>
-          )}
+          <div className="mt-4 min-h-6 text-sm" aria-live="polite">
+            {quoteLoading ? (
+              <p className="text-slate-300">Calculating shipping...</p>
+            ) : quote?.serviceable && quote.cheapest?.etd ? (
+              <p className="text-emerald-200">Estimated delivery: {quote.cheapest.etd}</p>
+            ) : message ? (
+              <p role="alert" className="flex items-center gap-2 text-rose-300"><span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-300 font-bold">!</span>{message}</p>
+            ) : !/^\d{6}$/.test(pincode) ? (
+              <p className="text-slate-300">Enter your 6-digit PIN code to calculate shipping.</p>
+            ) : null}
+          </div>
+
           <div className="mt-7 rounded-2xl bg-slate-900 p-5">
             <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>
             <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Shipping charge</span><span>{canCheckout ? `₹${shippingCharge.toFixed(2)}` : "—"}</span></div>
             <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Total to pay</span><span>₹{(subtotal + (canCheckout ? shippingCharge : 0)).toFixed(2)}</span></div>
-            <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is calculated using the live Shiprocket rate. We absorb any small difference at booking.</p>
+
           </div>
-          {message && <p role="alert" className="mt-5 rounded-xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{message}</p>}
+
           <button type="submit" disabled={loading || !canCheckout} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
             {loading ? "Processing..." : canCheckout ? `Pay ₹${(subtotal + shippingCharge).toFixed(2)}${method === "COD" ? " on Delivery" : " Online"}` : "Enter PIN code to calculate shipping"}
           </button>

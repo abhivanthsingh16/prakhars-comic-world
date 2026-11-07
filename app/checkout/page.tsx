@@ -156,14 +156,10 @@ export default function CheckoutPage() {
             </div>
           </div>
           <p className="mt-4 text-sm text-slate-300">{quoteLoading ? "Calculating live shipping charge..." : /^\d{6}$/.test(pincode) ? "Shipping is calculated automatically for your PIN code." : "Enter your 6-digit PIN code to calculate shipping automatically."}</p>
-          {quote?.serviceable && quote.cheapest && (
-            <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4">
-              <p className="font-semibold text-emerald-200">Courier service available</p>
-              <p className="mt-1 text-sm">Lowest available rate: ₹{quote.cheapest.rate.toFixed(2)} · {quote.cheapest.courierName}</p>
-              {quote.cheapest.etd && <p className="text-sm text-slate-300">Estimated delivery: {quote.cheapest.etd}</p>}
-              <p className="mt-2 text-xs text-slate-300">{method === "COD" ? (quote.codAvailable ? "COD service is available for this PIN code." : "COD is not available for this PIN code.") : "Prepaid courier service is available."}</p>
-              <p className="mt-1 text-xs text-slate-400">{quote.note}</p>
-            </div>
+          {quote?.serviceable && quote.cheapest?.etd && (
+            <p className="mt-3 text-sm text-emerald-200">
+              Estimated delivery: {quote.cheapest.etd}
+            </p>
           )}
           <div className="mt-7 rounded-2xl bg-slate-900 p-5">
             <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>

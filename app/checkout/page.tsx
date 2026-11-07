@@ -153,7 +153,7 @@ export default function CheckoutPage() {
       setMessage("Enter a valid 10-digit Indian mobile number.");
       return;
     }
-    const widgetId = process.env.NEXT_PUBLIC_MSG91_WIDGET_ID;
+    const widgetId = process.env.NEXT_PUBLIC_MSG91_WIDGET_ID || "366b676a4a76353033363535";
     const tokenAuth = process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH;
     if (!widgetId || !tokenAuth) {
       setMessage("OTP service configuration is missing. Please contact the store.");
@@ -199,7 +199,7 @@ export default function CheckoutPage() {
     setOtpLoading(true);
     window.verifyOtp(otp, async (data) => {
       try {
-        const accessToken = data?.["access-token"] || data?.accessToken || data?.token;
+        const accessToken = data?.["access-token"] || data?.accessToken || data?.token || (typeof data?.message === "string" && data.message.split(".").length === 3 ? data.message : undefined);
         if (typeof accessToken !== "string") throw new Error("MSG91 did not return a verification token.");
         const digits = customer.phone.replace(/\\D/g, "");
         const mobile = digits.length === 10 ? `91${digits}` : digits;

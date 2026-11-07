@@ -147,7 +147,7 @@ export default function CheckoutPage() {
 
   const startPhoneVerification = async () => {
     setMessage("");
-    const digits = customer.phone.replace(/\\D/g, "");
+    const digits = customer.phone.replace(/\D/g, "");
     const mobile = digits.length === 10 ? `91${digits}` : digits;
     if (!/^91\\d{10}$/.test(mobile)) {
       setMessage("Enter a valid 10-digit Indian mobile number.");
@@ -201,7 +201,7 @@ export default function CheckoutPage() {
       try {
         const accessToken = data?.["access-token"] || data?.accessToken || data?.token || (typeof data?.message === "string" && data.message.split(".").length === 3 ? data.message : undefined);
         if (typeof accessToken !== "string") throw new Error("MSG91 did not return a verification token.");
-        const digits = customer.phone.replace(/\\D/g, "");
+        const digits = customer.phone.replace(/\D/g, "");
         const mobile = digits.length === 10 ? `91${digits}` : digits;
         const response = await fetch("/api/verify-phone-otp", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -318,7 +318,7 @@ export default function CheckoutPage() {
                     </button>
                     {otpSent && (
                       <div className="flex flex-1 gap-2">
-                        <input inputMode="numeric" maxLength={4} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\\D/g, "").slice(0, 4))} placeholder="4-digit OTP" aria-label="4-digit OTP" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/80 p-3 text-white outline-none focus:border-yellow-400" />
+                        <input inputMode="numeric" maxLength={4} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="4-digit OTP" aria-label="4-digit OTP" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/80 p-3 text-white outline-none focus:border-yellow-400" />
                         <button type="button" disabled={otpLoading || otp.length !== 4} onClick={verifyPhoneOtp} className="rounded-xl bg-yellow-400 px-5 py-3 text-sm font-bold text-black disabled:opacity-50">{otpLoading ? "Verifying..." : "Confirm OTP"}</button>
                       </div>
                     )}

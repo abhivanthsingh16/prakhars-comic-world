@@ -9,6 +9,9 @@ type OrderRecord = {
   address?: string;
   quantity?: number;
   subtotal?: number;
+  shippingCharge?: number;
+  total?: number;
+  pincode?: string;
   paymentMethod?: "COD" | "Razorpay";
   paymentStatus?: "Pending" | "Paid";
   razorpayOrderId?: string;

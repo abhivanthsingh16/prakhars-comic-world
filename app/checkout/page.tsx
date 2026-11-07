@@ -9,10 +9,22 @@ declare global {
 }
 
 type Customer = { name: string; email: string; phone: string; address: string };
+type ShippingQuote = {
+  pincode: string;
+  paymentMethod: "COD" | "Prepaid";
+  serviceable: boolean;
+  codAvailable: boolean;
+  cheapest: { courierName: string; rate: number; etd: string } | null;
+  couriers: { courierName: string; rate: number; etd: string }[];
+  note: string;
+};
 
 export default function CheckoutPage() {
   const [quantity, setQuantity] = useState(1);
   const [customer, setCustomer] = useState<Customer>({ name: "", email: "", phone: "", address: "" });
+  const [pincode, setPincode] = useState("");
+  const [quote, setQuote] = useState<ShippingQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [scriptReady, setScriptReady] = useState(false);
   const [message, setMessage] = useState("");
@@ -34,9 +46,35 @@ export default function CheckoutPage() {
 
   const update = (field: keyof Customer, value: string) => setCustomer((current) => ({ ...current, [field]: value }));
 
+  const checkShipping = async () => {
+    setMessage("");
+    setQuoteLoading(true);
+    setQuote(null);
+    try {
+      const response = await fetch("/api/shipping-rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pincode, quantity, paymentMethod: method === "COD" ? "COD" : "Prepaid" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not check delivery serviceability.");
+      setQuote(result as ShippingQuote);
+      if (!result.serviceable) setMessage("Shiprocket currently shows no courier service for this PIN code and parcel.");
+      else if (method === "COD" && !result.codAvailable) setMessage("Courier service is available, but COD is not currently available for this PIN code.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Shipping check failed. Please try again.");
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
   const handleCheckout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage("");
+    if (!quote || quote.pincode !== pincode || quote.paymentMethod !== (method === "COD" ? "COD" : "Prepaid") || !quote.serviceable || (method === "COD" && !quote.codAvailable)) {
+      setMessage("Please check shipping serviceability again for your PIN code and selected payment method.");
+      return;
+    }
     setLoading(true);
     try {
       if (method === "COD") {
@@ -86,6 +124,8 @@ export default function CheckoutPage() {
     }
   };
 
+  const canCheckout = Boolean(quote && quote.pincode === pincode && quote.paymentMethod === (method === "COD" ? "COD" : "Prepaid") && quote.serviceable && (method !== "COD" || quote.codAvailable));
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-black pt-32 text-white">
       <div className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
@@ -96,27 +136,41 @@ export default function CheckoutPage() {
             <input required autoComplete="name" value={customer.name} onChange={(e) => update("name", e.target.value)} placeholder="Full Name" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
             <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Email Address" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
             <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Phone Number" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
-            <textarea required rows={4} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Full Shipping Address with PIN Code" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
+            <textarea required rows={4} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Full Shipping Address (house, street, area, city, state)" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
+            <input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="Delivery PIN Code (6 digits)" className="w-full rounded-xl bg-slate-900 p-4 outline-none focus:ring-2 focus:ring-yellow-400" />
           </div>
           <div className="mt-6">
             <p className="mb-3 font-semibold">Choose payment method</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <button type="button" onClick={() => setMethod("Razorpay")} className={`rounded-xl border p-4 text-left ${method === "Razorpay" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
+              <button type="button" onClick={() => { setMethod("Razorpay"); setQuote(null); }} className={`rounded-xl border p-4 text-left ${method === "Razorpay" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
                 <span className="block font-bold">Pay Online</span><span className="mt-1 block text-sm text-slate-300">UPI, cards and net banking</span>
               </button>
-              <button type="button" onClick={() => setMethod("COD")} className={`rounded-xl border p-4 text-left ${method === "COD" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
+              <button type="button" onClick={() => { setMethod("COD"); setQuote(null); }} className={`rounded-xl border p-4 text-left ${method === "COD" ? "border-yellow-400 bg-yellow-400/10" : "border-white/15 bg-slate-900"}`}>
                 <span className="block font-bold">Cash on Delivery</span><span className="mt-1 block text-sm text-slate-300">Pay when your book arrives</span>
               </button>
             </div>
           </div>
+          <button type="button" onClick={checkShipping} disabled={quoteLoading || !/^\\d{6}$/.test(pincode)} className="mt-5 w-full rounded-xl border border-yellow-400/50 bg-yellow-400/10 p-3 font-semibold text-yellow-200 disabled:opacity-50">
+            {quoteLoading ? "Checking couriers..." : "Check shipping & COD availability"}
+          </button>
+          {quote?.serviceable && quote.cheapest && (
+            <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4">
+              <p className="font-semibold text-emerald-200">Courier service available</p>
+              <p className="mt-1 text-sm">Lowest available rate: ₹{quote.cheapest.rate.toFixed(2)} · {quote.cheapest.courierName}</p>
+              {quote.cheapest.etd && <p className="text-sm text-slate-300">Estimated delivery: {quote.cheapest.etd}</p>}
+              <p className="mt-2 text-xs text-slate-300">{method === "COD" ? (quote.codAvailable ? "COD service is available for this PIN code." : "COD is not available for this PIN code.") : "Prepaid courier service is available."}</p>
+              <p className="mt-1 text-xs text-slate-400">{quote.note}</p>
+            </div>
+          )}
           <div className="mt-7 rounded-2xl bg-slate-900 p-5">
             <div className="flex justify-between gap-4"><span>The Alien Friend Lin x {quantity}</span><span>₹{subtotal}</span></div>
+            {quote?.serviceable && quote.cheapest && <div className="mt-2 flex justify-between gap-4 text-sm text-slate-300"><span>Indicative shipping (lowest courier)</span><span>₹{quote.cheapest.rate.toFixed(2)}</span></div>}
             <div className="mt-3 flex justify-between border-t border-white/10 pt-3 text-lg font-bold"><span>Book subtotal</span><span>₹{subtotal}</span></div>
-            <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is not included. The final delivery charge must be confirmed before accepting live orders. COD availability may depend on courier serviceability.</p>
+            <p className="mt-3 text-xs leading-5 text-slate-400">Shipping is currently shown as an estimate only and is not yet added to the payment amount. Do not accept live orders until the final shipping charge is integrated.</p>
           </div>
           {message && <p role="alert" className="mt-5 rounded-xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{message}</p>}
-          <button type="submit" disabled={loading} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
-            {loading ? "Processing..." : method === "COD" ? `Place COD Order · ₹${subtotal} + shipping` : !scriptReady ? "Loading payment..." : `Pay ₹${subtotal} + shipping`}
+          <button type="submit" disabled={loading || !canCheckout} className="mt-7 w-full rounded-full bg-yellow-400 py-4 text-lg font-bold text-black disabled:cursor-not-allowed disabled:opacity-60">
+            {loading ? "Processing..." : !canCheckout ? "Check shipping to continue" : method === "COD" ? `Place COD Order · ₹${subtotal} + shipping` : !scriptReady ? "Loading payment..." : `Pay ₹${subtotal} + shipping`}
           </button>
           <p className="mt-3 text-center text-xs text-slate-400">Lin and Leo · Secure checkout</p>
         </form>

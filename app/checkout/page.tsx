@@ -137,22 +137,49 @@ export default function CheckoutPage() {
         <h1 className="text-4xl font-black sm:text-5xl">Checkout</h1>
         <p className="mt-3 text-slate-300">Enter your delivery details to continue.</p>
         <form onSubmit={handleCheckout} className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5 sm:p-8">
-          <section>
-            <h2 className="mb-4 text-lg font-bold">Contact details</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input required autoComplete="name" value={customer.name} onChange={(e) => update("name", e.target.value)} placeholder="Full name" aria-label="Full name" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
-              <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Mobile number" aria-label="Mobile number" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
-              <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Email address" aria-label="Email address" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400 sm:col-span-2" />
+          <section className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70">
+            <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl" aria-hidden="true">👤</span>
+              <div>
+                <h2 className="font-bold">Contact details</h2>
+                <p className="text-xs text-slate-400">Your order updates will be sent here</p>
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
+              <label className="block text-sm font-medium text-slate-300">Full name
+                <input required autoComplete="name" value={customer.name} onChange={(e) => update("name", e.target.value)} placeholder="Enter your full name" aria-label="Full name" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+              </label>
+              <label className="block text-sm font-medium text-slate-300">Mobile number
+                <input required type="tel" autoComplete="tel" pattern="[0-9+ -]{10,15}" value={customer.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Enter mobile number" aria-label="Mobile number" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+              </label>
+              <label className="block text-sm font-medium text-slate-300">Email address
+                <input required type="email" autoComplete="email" value={customer.email} onChange={(e) => update("email", e.target.value)} placeholder="Enter email address" aria-label="Email address" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+              </label>
             </div>
           </section>
-          <section className="mt-7 border-t border-white/10 pt-6">
-            <h2 className="mb-1 text-lg font-bold">Delivery address</h2>
-            <p className="mb-4 text-sm text-slate-300">Please provide the complete address where we should deliver your comic.</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <textarea required rows={2} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="House / flat, street, area, landmark" aria-label="House, street and area" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400 sm:col-span-2" />
-              <input required autoComplete="address-level2" value={customer.city} onChange={(e) => update("city", e.target.value)} placeholder="City" aria-label="City" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
-              <input required autoComplete="address-level1" value={customer.state} onChange={(e) => update("state", e.target.value)} placeholder="State" aria-label="State" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400" />
-              <input required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="6-digit PIN code" aria-label="6-digit PIN code" className="w-full rounded-xl border border-white/10 bg-slate-900 p-4 outline-none focus:border-yellow-400 sm:col-span-2" />
+          <section className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70">
+            <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl" aria-hidden="true">📍</span>
+              <div>
+                <h2 className="font-bold">Delivery address</h2>
+                <p className="text-xs text-slate-400">Where should we deliver your comic?</p>
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
+              <label className="block text-sm font-medium text-slate-300">House / flat, street, area and landmark
+                <textarea required rows={2} autoComplete="street-address" value={customer.address} onChange={(e) => update("address", e.target.value)} placeholder="Enter house number, street, area and landmark" aria-label="House, street and area" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium text-slate-300">City
+                  <input required autoComplete="address-level2" value={customer.city} onChange={(e) => update("city", e.target.value)} placeholder="City" aria-label="City" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                </label>
+                <label className="block text-sm font-medium text-slate-300">State
+                  <input required autoComplete="address-level1" value={customer.state} onChange={(e) => update("state", e.target.value)} placeholder="State" aria-label="State" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+                </label>
+              </div>
+              <label className="block text-sm font-medium text-slate-300">PIN code
+                <input required inputMode="numeric" autoComplete="postal-code" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(e) => { setPincode(e.target.value.replace(/\D/g, "").slice(0, 6)); setQuote(null); }} placeholder="6-digit PIN code" aria-label="6-digit PIN code" className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/80 p-4 text-white outline-none transition focus:border-yellow-400" />
+              </label>
             </div>
           </section>
           <div className="mt-6">

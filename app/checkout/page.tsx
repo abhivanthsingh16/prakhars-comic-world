@@ -149,7 +149,7 @@ export default function CheckoutPage() {
     setMessage("");
     const digits = customer.phone.replace(/\D/g, "");
     const mobile = digits.length === 10 ? `91${digits}` : digits;
-    if (!/^91\\d{10}$/.test(mobile)) {
+    if (!/^91\d{10}$/.test(mobile)) {
       setMessage("Enter a valid 10-digit Indian mobile number.");
       return;
     }
@@ -188,7 +188,7 @@ export default function CheckoutPage() {
 
   const verifyPhoneOtp = async () => {
     setMessage("");
-    if (!/^\\d{4}$/.test(otp)) {
+    if (!/^\d{4}$/.test(otp)) {
       setMessage("Enter the 4-digit OTP.");
       return;
     }

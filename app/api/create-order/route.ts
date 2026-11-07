@@ -1,6 +1,7 @@
 import Razorpay from "razorpay";
 import { NextRequest, NextResponse } from "next/server";
 import { saveOrder } from "@/lib/orders";
+import { isPhoneVerificationProofValid } from "@/lib/phone-verification";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,8 @@ export async function POST(request: NextRequest) {
     const pincode = String(body?.pincode || "");
     const shippingCharge = Number(body?.shippingCharge);
     const { name, email, phone, address } = body || {};
+    const normalizedPhone = typeof phone === "string" ? phone.replace(/\\D/g, "") : "";
+    const phoneVerified = isPhoneVerificationProofValid(normalizedPhone, body?.phoneVerificationProof);
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10 ||
         ![name, email, phone, address].every((v) => typeof v === "string" && v.trim()) ||
         !/^[0-9+ -]{10,15}$/.test(phone) || !/^\\d{6}$/.test(pincode) || !Number.isFinite(shippingCharge) || shippingCharge <= 0) {

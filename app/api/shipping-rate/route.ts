@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       courierName: String(c.courier_name || "Courier"),
       rate: Number(c.rate ?? c.freight_charge ?? 0),
       etd: String(c.etd || c.estimated_delivery_days || ""),
-      codAvailable: Boolean(c.cod),
+      codAvailable: c.cod === true || c.cod === 1 || c.cod === "1",
       courierId: Number(c.courier_company_id || 0),
     })).filter((c: { rate: number }) => Number.isFinite(c.rate) && c.rate > 0)
       .sort((a: { rate: number }, b: { rate: number }) => a.rate - b.rate);
